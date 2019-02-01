@@ -1,51 +1,14 @@
 <html>
-<head>
-  <meta charset="utf-8">
-</head>
-<body>
+  <body>
+    <p id='server-time'></p>
+    <script>
+      var HOST = location.origin.replace(/^http/, 'ws')
+      var ws = new WebSocket(HOST);
+      var el = document.getElementById('server-time');
 
-<!-- форма для отправки сообщений -->
-<form name="publish">
-  <input type="text" name="message"/>
-  <input type="submit" value="Отправить"/>
-</form>
-
-<!-- здесь будут появляться входящие сообщения -->
-<div id="subscribe"></div>
-
-<script >
-    if (!window.WebSocket) {
-        document.body.innerHTML = 'WebSocket в этом браузере не поддерживается.';
-    }
-
-    // создать подключение
-    //var socket = new WebSocket("ws://"+window.location.hostname+":8081");
-    var HOST = location.origin.replace(/^http/, 'ws')
-    var ws = new WebSocket(HOST);
-
-
-
-    // отправить сообщение из формы publish
-    document.forms.publish.onsubmit = function() {
-        var outgoingMessage = this.message.value;
-
-        WebSocket.send(outgoingMessage);
-        return false;
-    };
-
-    // обработчик входящих сообщений
-    WebSocket.onmessage = function(event) {
-        var incomingMessage = event.data;
-        showMessage(incomingMessage);
-    };
-
-    // показать сообщение в div#subscribe
-    function showMessage(message) {
-        var messageElem = document.createElement('div');
-        messageElem.appendChild(document.createTextNode(message));
-        document.getElementById('subscribe').appendChild(messageElem);
-    }
-</script>
-
-</body>
+      ws.onmessage = function (event) {
+        el.innerHTML = 'Server time: ' + event.data;
+      };
+    </script>
+  </body>
 </html>
