@@ -1,14 +1,32 @@
 <html>
   <body>
-    <p id='server-time'></p>
+
+  <!-- форма для отправки сообщений -->
+  <form name="publish">
+    <input type="text" name="message"/>
+    <input type="submit" value="Отправить"/>
+  </form>
+
+    <p id='subscribe'></p>
     <script>
       var HOST = location.origin.replace(/^http/, 'ws')
       var ws = new WebSocket(HOST);
-      var el = document.getElementById('server-time');
 
       ws.onmessage = function (event) {
-        el.innerHTML = 'Server time: ' + event.data;
+        var messageElem = document.createElement('div');
+        messageElem.appendChild(document.createTextNode(event.data));
+        document.getElementById('subscribe').appendChild(messageElem);
+
       };
+
+      document.forms.publish.onsubmit = function() {
+          var outgoingMessage = this.message.value;
+
+          ws.send(outgoingMessage);
+          return false;
+      };
+
+
     </script>
   </body>
 </html>
