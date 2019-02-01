@@ -29,12 +29,12 @@
     document.forms.publish.onsubmit = function() {
         var outgoingMessage = this.message.value;
 
-        socket.send(outgoingMessage);
+        WebSocket.send(outgoingMessage);
         return false;
     };
 
     // обработчик входящих сообщений
-    socket.onmessage = function(event) {
+    WebSocket.onmessage = function(event) {
         var incomingMessage = event.data;
         showMessage(incomingMessage);
     };
