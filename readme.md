@@ -1,3 +1,5 @@
+Немного изменен для личных целей. 
+
 # Node.js WebSocket Example
 
 This example accompanies the
