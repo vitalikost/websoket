@@ -1,15 +1,19 @@
 <html>
-  <body>
-    <p id='server-time'></p>
-    <script>
-      var HOST = location.origin.replace(/^http/, 'ws')
-      var ws = new WebSocket(HOST);
-	console.log(HOST);
-      var el = document.getElementById('server-time');
+<head>
+  <meta charset="utf-8">
+</head>
+<body>
 
-      ws.onmessage = function (event) {
-        el.innerHTML = 'Server time: ' + event.data;
-      };
-    </script>
-  </body>
+<!-- форма для отправки сообщений -->
+<form name="publish">
+  <input type="text" name="message"/>
+  <input type="submit" value="Отправить"/>
+</form>
+
+<!-- здесь будут появляться входящие сообщения -->
+<div id="subscribe"></div>
+
+<script src="browser.js"></script>
+
+</body>
 </html>
