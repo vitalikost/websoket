@@ -1,32 +1,304 @@
-<html>
-  <body>
+<!DOCTYPE html>
+<meta charset="utf-8" />
+<title>WebSocket Test</title>
+<head>
+  <style type="text/css">
+    .checkbox input {
+      position: absolute;
+      z-index: -1;
+      opacity: 0;
+      margin: 10px 0 0 20px;
+    }
+    .checkbox__text {
+      position: relative;
+      padding: 0 0 0 60px;
+      cursor: pointer;
+    }
+    .checkbox__text:before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: 0;
+      width: 50px;
+      height: 26px;
+      border-radius: 13px;
+      background: #CDD1DA;
+      box-shadow: inset 0 2px 3px rgba(0,0,0,.2);
+      transition: .2s;
+    }
+    .checkbox__text:after {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 2px;
+      width: 22px;
+      height: 22px;
+      border-radius: 10px;
+      background: #FFF;
+      box-shadow: 0 2px 5px rgba(0,0,0,.3);
+      transition: .2s;
+    }
+    .checkbox input:checked + .checkbox__text:before {
+      background: #9FD468;
+    }
+    .checkbox input:checked + .checkbox__text:after {
+      left: 26px;
+    }
+    .checkbox input:focus + .checkbox__text:before {
+      box-shadow: inset 0 2px 3px rgba(0,0,0,.2), 0 0 0 3px rgba(255,255,0,.7);
+    }
 
-  <!-- форма для отправки сообщений -->
-  <form name="publish">
-    <input type="text" name="message"/>
-    <input type="submit" value="Отправить"/>
-  </form>
+  </style>
+</head>
+<h2>Contol esp-12e</h2>
 
-    <p id='subscribe'></p>
-    <script>
-      var HOST = location.origin.replace(/^http/, 'ws')
-      var ws = new WebSocket(HOST);
-
-      ws.onmessage = function (event) {
-        var messageElem = document.createElement('div');
-        messageElem.appendChild(document.createTextNode(event.data));
-        document.getElementById('subscribe').appendChild(messageElem);
-
-      };
-
-      document.forms.publish.onsubmit = function() {
-          var outgoingMessage = this.message.value;
-
-          ws.send(outgoingMessage);
-          return false;
-      };
+<input type="text" id="wsurl">
+<button id="connect"> Connect </button>
+<br>
+<input type="checkbox" id="AutoUpdate"> Autoupdate
+<input type="checkbox" id="Log" checked = 1> Syslog
+<div id="Controllers"></div>
+<!--
+<label class="checkbox">
+ <input type="checkbox" id="LED1"/>
+ <div class="checkbox__text">Led_1</div>
+</label>
+<br>
 
 
-    </script>
-  </body>
-</html>
+<label class="checkbox">
+ <input type="checkbox" id="LED2"/>
+ <div class="checkbox__text">Led_2</div>
+</label>
+-->
+
+
+<!--
+        <button id="button_ON_LED1">ON LED_1</button>
+        <button id="button_OFF_LED1">OFF LED_1</button>
+        <button id="button_ON_LED2">ON LED_2</button>
+        <button id="button_OFF_LED2">OFF LED_2</button>
+-->
+
+<div id="output"></div>
+
+<script language="javascript" type="text/javascript">
+
+    //var wsUri = "wss://echo.websocket.org/";
+    var wsUri = "";
+    var output;
+    var interval;
+    var clientArray = new Array();
+    var debug = true;//Р§РµСЂРµР· РєРѕРЅСЃРѕР»СЊ Р·Р°РґР°С‚СЊ true, Р±СѓРґРµС‚ РІС‹РґРµРЅ Р»РѕРі РѕР±РјРµРЅР°
+    function init()
+    {
+        output = document.getElementById("output");
+        testWebSocket();
+    }
+
+    function testWebSocket()
+    {
+        websocket = new WebSocket(wsUri);
+        websocket.onopen = function(evt) { onOpen(evt) };
+        websocket.onclose = function(evt) { onClose(evt) };
+        websocket.onmessage = function(evt) { onMessage(evt) };
+        websocket.onerror = function(evt) { onError(evt) };
+    }
+
+    function onOpen(evt)
+    {
+        writeToScreen("CONNECTED");
+        doSend(JSON.stringify({"Name":"Controller","Command":"STATUS","Client":"ALL"}));
+    }
+
+    function onClose(evt)
+    {
+        writeToScreen("DISCONNECTED");
+        setTimeout(testWebSocket,5000);
+    }
+
+    function onMessage(evt)
+    {
+        var command;
+        command = JSON.parse(evt.data);
+        if(command.Name != "Controller")
+        {
+            //output = document.getElementById("output");
+
+
+
+            var res = clientArray.find(function(e){return e == command.Name });
+            if(res == undefined){//Р”РѕР±Р°РІР»СЏРµРј РЅРѕРІРѕРіРѕ РєР»РёРµРЅС‚Р° РґР»СЏ РјРѕРЅРёРѕСЂРёРЅРіР° Рё СѓРїСЂР°РІР»РµРЅРёСЏ
+                clientArray.push(command.Name);
+                console.log("add new client");
+                if(Array.isArray(command.Status))
+                {
+                    AddCheckbox(command.Name,command.Status.length);
+                    GetStatus(command.Name,command.Status);
+//                    document.getElementById("LED1").checked = command.Status[0];
+//                    document.getElementById("LED2").checked = command.Status[1];
+                }
+
+
+
+
+                //  AddCheckbox(command.Name,2);
+            }
+            else//РЈР¶Рµ РµСЃС‚СЊ, Р±СѓРґРµРј РІС‹СЃС‚Р°РІР»СЏС‚СЊ СЃС‚СѓС‚СѓСЃС‹
+            {
+                GetStatus(command.Name,command.Status);
+
+                /*            if(Array.isArray(command.Status))
+                    {
+                        for(var i = 0;i <= command.Status.length-1;i++)
+                        {
+                            document.getElementById(command.Name+"_pin_"+(i+1)).checked = command.Status[i];
+                        }
+                    }
+    */
+            }
+
+
+            /*
+                    if(Array.isArray(command.Status))
+                    {
+                        document.getElementById("LED1").checked = command.Status[0];
+                        document.getElementById("LED2").checked = command.Status[1];
+                    }
+            */
+        }
+
+        writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+    }
+
+    function onError(evt)
+    {
+        writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
+    }
+
+    function doSend(message)
+    {
+        writeToScreen("SENT: " + message);
+
+        websocket.send(message);
+    }
+
+    function writeToScreen(message)
+    {
+        if(debug){
+            var pre = document.createElement("p");
+            pre.style.wordWrap = "break-word";
+            pre.innerHTML = message;
+            output.appendChild(pre);
+        }
+
+    }
+
+    window.addEventListener("load", function () {
+        var serverhouse = localStorage.getItem("ServerHouse");
+        if (serverhouse != null)
+        {
+            wsUri = serverhouse;
+            document.getElementById("wsurl").value = wsUri;
+            init();
+        }
+    }, false);
+
+
+    function AddCheckbox(comment,pin) {
+
+        var root = document.getElementById("Controllers");
+        var pre = document.createElement("div");
+        pre.innerHTML = "<H2>"+comment+"</H2>";
+        root.appendChild(pre);
+        root = pre;
+
+        var a = 1;
+        while (a <= pin ){
+            pre = document.createElement("p");
+            root.appendChild(pre);
+            pre = document.createElement("label");
+            pre.className = "checkbox";
+            root.appendChild(pre);
+            root  = pre;
+            pre = document.createElement("input");
+            pre.type = "checkbox";
+            pre.id = comment+"_pin_"+a;
+            pre.i = a;
+            pre.addEventListener("change",function () {
+                if(this.checked) {
+                    doSend(JSON.stringify({"Name":"Controller","Command":"ON_"+this.i,"Client":comment}));
+                } else {
+                    doSend(JSON.stringify({"Name":"Controller","Command":"OFF_"+this.i,"Client":comment}));
+                }
+            });
+
+            root.appendChild(pre);
+            pre = document.createElement("div");
+            pre.className = "checkbox__text";
+            pre.innerHTML = "Led "+a;
+            root.appendChild(pre);
+            root = document.getElementById("Controllers");
+            pre = document.createElement("br");
+            root.appendChild(pre);
+            a++;
+        }
+    }
+
+    function GetStatus(comment,pin) {
+        if(Array.isArray(pin))
+        {
+            for(var i = 0;i <= pin.length-1;i++)
+            {
+                document.getElementById(comment+"_pin_"+(i+1)).checked = pin[i];
+            }
+        }
+    }
+
+    /*
+    document.getElementById("button_ON_LED1").addEventListener("click",function () {
+       doSend(JSON.stringify({"Name":"Controller","Command":"ON_1"}));
+    })
+
+    document.getElementById("button_OFF_LED1").addEventListener("click",function () {
+      doSend(JSON.stringify({"Name":"Controller","Command":"OFF_1"}));
+    })
+
+    document.getElementById("button_ON_LED2").addEventListener("click",function () {
+       doSend(JSON.stringify({"Name":"Controller","Command":"ON_2"}));
+    })
+
+    */
+    document.getElementById("Log").addEventListener("change",function () {
+        if(this.checked)
+            debug = true;
+        else
+            debug = false;
+
+    })
+
+
+    document.getElementById("AutoUpdate").addEventListener("change",function () {
+        if(this.checked) {
+            interval = setInterval(function () {
+                var root = document.getElementById("Controllers");
+                while (root.firstChild) {
+                    root.removeChild(root.firstChild);
+                }
+                clientArray  = [];
+                doSend(JSON.stringify({"Name":"Controller","Command":"STATUS","Client":"ALL"}));
+            },60*1000);//Раз в минуту проверяем клиентов
+        } else {
+
+
+            clearInterval(interval);
+        }
+    })
+
+    document.getElementById("connect").addEventListener("click",function () {
+        wsUri = document.getElementById("wsurl").value;
+        localStorage.setItem("ServerHouse",wsUri);
+        init();
+    })
+
+</script>
