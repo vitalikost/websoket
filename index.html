@@ -113,14 +113,21 @@
 
     function onClose(evt)
     {
-        writeToScreen("DISCONNECTED");
+        writeToScreen("DISCONNECTED");//heroku.com
         setTimeout(testWebSocket,5000);
     }
 
     function onMessage(evt)
     {
         var command;
-        command = JSON.parse(evt.data);
+        try {
+            command = JSON.parse(evt.data);
+        }
+        catch (e) {
+            writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
+            return;
+        }
+
         if(command.Name != "Controller")
         {
             //output = document.getElementById("output");
